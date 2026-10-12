@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% from "macros.html" import status_badge, page_header %}
+{% block title %}Integrations{% endblock %}
+{% block heading %}Integrations{% endblock %}
+{% block content %}
+{{ page_header("Integrations", "Every external system sits behind a connector interface. This public edition runs mock connectors; you can inject failures to watch the retry, error-handling and UI states react.") }}
+
+<div class="row g-3 mb-3">
+  {% for r in rows %}
+  <div class="col-xl-4 col-md-6">
+    <div class="conn-card">
+      <div class="d-flex justify-content-between align-items-start mb-1">
+        <h2 class="h6 mb-0"><i class="bi bi-plug me-1 text-primary"></i>{{ r.connector.label }}</h2>
+        {{ status_badge(r.health.state.value) }}
+      </div>
+      <p class="text-secondary small">{{ r.connector.description }}</p>
+      <dl class="row small mb-3">
+        <dt class="col-5 text-secondary">Implementation</dt><dd class="col-7 mono">{{ r.connector.implementation }}</dd>
+        <dt class="col-5 text-secondary">Calls served</dt><dd class="col-7">{{ r.calls }}</dd>
+        <dt class="col-5 text-secondary">Probe latency</dt><dd class="col-7">{{ '%.1f'|format(r.health.latency_ms) }} ms</dd>
+        <dt class="col-5 text-secondary">Last error</dt><dd class="col-7 text-break">{{ r.last_error or '—' }}</dd>
+      </dl>
+      {% if r.can_inject %}
+      <form class="d-flex gap-2" method="post" action="{{ url_for('integrations.set_fault', name=r.connector.name) }}">
+        <select class="form-select form-select-sm" name="fault" aria-label="Injected fault">
+          {% for f in faults %}<option value="{{ f.value }}" {{ 'selected' if f == r.fault }}>{{ f.value|replace('_',' ')|capitalize }}</option>{% endfor %}
+        </select>
+        <button class="btn btn-sm btn-outline-primary">Apply</button>
+      </form>
+      <div class="form-text">Fault injection (mock only)</div>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="panel h-100">
+      <div class="panel-head"><h2>How a request flows</h2></div>
+      <div class="panel-body small">
+        <ol class="mb-0 ps-3">
+          <li class="mb-2"><strong>Route</strong> receives the click and calls a service (e.g. <code>PhoneService.reboot</code>).</li>
+          <li class="mb-2"><strong>Service</strong> loads the device from its repository and asks the <strong>connector interface</strong> to act, wrapped in retry-with-backoff.</li>
+          <li class="mb-2"><strong>Connector</strong> (mock here, real elsewhere) returns data or raises a typed error — timeout, rate limit, bad request, auth failure.</li>
+          <li class="mb-2">The service turns the outcome into an audit-log entry and a user-facing message; the database is only updated when the device accepted the change.</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-5">
+    <div class="panel h-100">
+      <div class="panel-head"><h2>Runtime configuration</h2></div>
+      <div class="panel-body">
+        <dl class="row small mb-0">
+          {% for key, value in settings_view.items() %}<dt class="col-7 text-secondary">{{ key }}</dt><dd class="col-5 mono">{{ value }}</dd>{% endfor %}
+        </dl>
+        <div class="form-text mt-2">Read-only. Settings come from environment variables (see <code>.env.example</code>); secrets are never displayed.</div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

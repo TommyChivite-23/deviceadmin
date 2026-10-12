@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% from "macros.html" import status_badge, kpi, page_header, empty_state, dt %}
+{% block title %}Dashboard{% endblock %}
+{% block heading %}Dashboard{% endblock %}
+{% block content %}
+{% call page_header("Fleet overview", "Live inventory, integration health and recent automation across all sites.") %}
+  <form method="post" action="{{ url_for('phones.sync_fleet') }}">
+    <button class="btn btn-primary" data-overlay><i class="bi bi-arrow-repeat me-1"></i>Sync all phones</button>
+  </form>
+{% endcall %}
+
+{% set online_pct = (stats.online_phones / stats.total_phones * 100)|round|int if stats.total_phones else 0 %}
+<div class="kpi-grid">
+  {{ kpi("Desk phones", stats.total_phones, "telephone", stats.online_phones ~ " online · " ~ stats.offline_phones ~ " offline") }}
+  {{ kpi("Docking stations", stats.total_docks, "usb-drive", stats.connected_docks ~ " connected") }}
+  {{ kpi("Docks needing firmware", stats.outdated_docks, "cpu", "behind latest release", "warn" if stats.outdated_docks else "ok") }}
+  {{ kpi("Locked volume policies", stats.locked_volumes, "lock", "enforced fleet-wide") }}
+  {{ kpi("Failed actions (24h)", stats.failed_24h, "exclamation-triangle", stats.actions_24h ~ " actions in the last 24h", "bad" if stats.failed_24h else "ok") }}
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-xl-4 col-md-6">
+    <div class="panel h-100">
+      <div class="panel-head"><h2>Phone availability</h2></div>
+      <div class="panel-body d-flex align-items-center gap-4">
+        {% if stats.total_phones %}
+        <div class="donut" style="background: conic-gradient(var(--ok) 0 {{ online_pct }}%, #e3a39d {{ online_pct }}% 100%)">
+          <div class="donut-label"><div>{{ online_pct }}%<small>online</small></div></div>
+        </div>
+        <div class="small">
+          <div class="mb-2"><span class="legend-dot" style="background:var(--ok)"></span><strong>{{ stats.online_phones }}</strong> online</div>
+          <div class="mb-2"><span class="legend-dot" style="background:#e3a39d"></span><strong>{{ stats.offline_phones }}</strong> offline</div>
+          <a href="{{ url_for('phones.phone_list', status='offline') }}">View offline phones →</a>
+        </div>
+        {% else %}{{ empty_state("telephone", "No phones yet", "Add a phone to see availability.") }}{% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-xl-4 col-md-6">
+    <div class="panel h-100">
+      <div class="panel-head"><h2>Assets by department</h2></div>
+      <div class="panel-body">
+        {% set top = stats.by_department[:6] %}
+        {% set peak = (top|map(attribute='phones')|max) if top else 1 %}
+        {% for d in top %}
+        <div class="bar-row"><span class="text-truncate">{{ d.department }}</span>
+          <div class="bar-track"><div class="bar-fill" style="width: {{ (d.phones / (peak or 1) * 100)|round }}%"></div></div>
+          <span class="text-end fw-semibold">{{ d.phones }}</span></div>
+        {% else %}{{ empty_state("diagram-3", "No departments", "Seed or add reference data.") }}{% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-xl-4">
+    <div class="panel h-100">
+      <div class="panel-head"><h2>Integration health</h2><a class="small" href="{{ url_for('integrations.overview') }}">Manage</a></div>
+      <div class="panel-body">
+        {% for connector, h in health %}
+        <div class="d-flex justify-content-between align-items-center py-2 {{ 'border-bottom' if not loop.last }}">
+          <div><div class="fw-semibold">{{ connector.label }}</div>
+            <div class="sub">{{ connector.implementation }} connector · {{ '%.0f'|format(h.latency_ms) }} ms</div></div>
+          {{ status_badge(h.state.value) }}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-xl-5">
+    <div class="panel h-100">
+      <div class="panel-head"><h2>Phone firmware mix</h2></div>
+      <div class="panel-body">
+        {% for f in stats.firmware_mix %}
+        <div class="bar-row"><span class="mono">{{ f.version or 'unknown' }}</span>
+          <div class="bar-track"><div class="bar-fill" style="width: {{ (f.count / stats.total_phones * 100)|round }}%"></div></div>
+          <span class="text-end fw-semibold">{{ f.count }}</span></div>
+        {% else %}<div class="text-secondary">No data.</div>{% endfor %}
+      </div>
+    </div>
+  </div>
+  <div class="col-xl-7">
+    <div class="panel h-100">
+      <div class="panel-head"><h2>Recent activity</h2><a class="small" href="{{ url_for('activity.activity_log') }}">View all</a></div>
+      {% if recent %}
+      <ul class="timeline">
+        {% for a in recent %}
+        <li><div class="flex-grow-1"><div class="fw-semibold">{{ a.device_name or a.action_type }}
+              <span class="text-secondary fw-normal">· {{ a.action_type|replace('_',' ') }}</span></div>
+            <div class="sub">{{ a.description }}</div></div>
+          <div class="text-end">{{ status_badge(a.status) }}<div class="when mt-1">{{ dt(a.timestamp) }}</div></div></li>
+        {% endfor %}
+      </ul>
+      {% else %}{{ empty_state("clock-history", "No activity yet", "Actions you take will be audited here.") }}{% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

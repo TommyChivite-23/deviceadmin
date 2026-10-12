@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% from "macros.html" import status_badge, empty_state, page_header, kpi, dt %}
+{% block title %}Emergency alerts{% endblock %}
+{% block heading %}Emergency alerts{% endblock %}
+{% block content %}
+{{ page_header("Emergency broadcast", "Send one SMS to every active contact and keep an audit record of exactly who received it.") }}
+<div class="kpi-grid">
+  {{ kpi("Active recipients", active_count, "people", "of " ~ contacts|length ~ " contacts") }}
+  {{ kpi("Broadcasts sent", history|length, "send", "most recent 15 shown") }}
+</div>
+
+<div class="row g-3">
+  <div class="col-xl-5">
+    <div class="panel mb-3 border-danger-subtle">
+      <div class="panel-head"><h2><i class="bi bi-broadcast text-danger me-1"></i>Send broadcast</h2></div>
+      <form class="panel-body" method="post" action="{{ url_for('alerts.broadcast') }}">
+        <label class="form-label">Message (leave blank to use the default)</label>
+        <textarea class="form-control mb-2" name="message" rows="3" maxlength="400" placeholder="{{ default_message }}"></textarea>
+        <button class="btn btn-danger w-100" data-overlay data-confirm="Send this alert to {{ active_count }} active contact(s)? This cannot be undone." {{ 'disabled' if not active_count }}>
+          <i class="bi bi-send me-1"></i>Send to {{ active_count }} contact{{ '' if active_count == 1 else 's' }}</button>
+        <div class="form-text">Delivery uses the SMS connector (mock gateway in this demo). Numbers ending in 0100 simulate an opted-out recipient.</div>
+      </form>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h2>Broadcast history</h2></div>
+      {% if history %}<ul class="timeline">{% for h in history %}
+        <li><div class="flex-grow-1"><div class="small">{{ h.message[:90] }}{{ '…' if h.message|length > 90 }}</div>
+            <div class="sub">{{ h.sent_count }} delivered · {{ h.failed_count }} failed of {{ h.total_contacts }}</div></div>
+          <div class="text-end">{{ status_badge(h.status) }}<div class="when mt-1">{{ dt(h.timestamp) }}</div></div></li>{% endfor %}</ul>
+      {% else %}{{ empty_state("send-x", "Nothing sent yet", "Broadcasts will be listed here.") }}{% endif %}
+    </div>
+  </div>
+
+  <div class="col-xl-7">
+    <div class="panel">
+      <div class="panel-head"><h2>Contact list</h2></div>
+      {% if contacts %}
+      <div class="table-wrap"><table class="data-table">
+        <thead><tr><th>Name</th><th>Role</th><th>Phone</th><th>Status</th><th></th></tr></thead>
+        <tbody>{% for c in contacts %}
+          <tr class="{{ '' if c.is_active else 'text-secondary' }}"><td class="fw-semibold">{{ c.name }}</td><td>{{ c.role or '—' }}</td><td class="mono">{{ c.phone }}</td>
+            <td>{{ status_badge('connected' if c.is_active else 'unknown', 'Active' if c.is_active else 'Paused') }}</td>
+            <td class="text-end text-nowrap"><form method="post" class="d-inline">
+              <button class="btn btn-sm btn-outline-secondary" formaction="{{ url_for('alerts.test_contact', contact_id=c.id) }}" title="Send a test message">Test</button>
+              <button class="btn btn-sm btn-outline-secondary" formaction="{{ url_for('alerts.toggle_contact', contact_id=c.id) }}">{{ 'Pause' if c.is_active else 'Activate' }}</button>
+              <button class="btn btn-sm btn-outline-danger" formaction="{{ url_for('alerts.delete_contact', contact_id=c.id) }}" data-confirm="Remove {{ c.name }}?"><i class="bi bi-trash"></i></button>
+            </form></td></tr>
+        {% endfor %}</tbody></table></div>
+      {% else %}{{ empty_state("person-plus", "No contacts", "Add at least one contact to enable broadcasts.") }}{% endif %}
+      <form class="panel-body border-top row g-2" method="post" action="{{ url_for('alerts.add_contact') }}">
+        <div class="col-md-3"><input class="form-control form-control-sm" name="name" placeholder="Name" required></div>
+        <div class="col-md-3"><input class="form-control form-control-sm" name="role" placeholder="Role"></div>
+        <div class="col-md-4"><input class="form-control form-control-sm" name="phone" placeholder="(202) 555-0123" required></div>
+        <div class="col-md-2"><button class="btn btn-sm btn-primary w-100">Add</button></div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% from "macros.html" import status_badge, empty_state, page_header, dt %}
+{% block title %}Activity{% endblock %}
+{% block heading %}Activity{% endblock %}
+{% block content %}
+{{ page_header("Activity log", "Every action taken through the dashboard is audited here.") }}
+<div class="panel mb-3">
+  <form class="filter-bar" method="get">
+    <select class="form-select form-select-sm" name="type" onchange="this.form.submit()">
+      {% for value, label in [('all','All devices'),('phone','Phones'),('dock','Docks'),('alert','Alerts'),('system','System')] %}
+      <option value="{{ value }}" {{ 'selected' if kind == value }}>{{ label }}</option>{% endfor %}
+    </select>
+    <select class="form-select form-select-sm" name="limit" onchange="this.form.submit()">
+      {% for n in [50, 100, 250, 500] %}<option value="{{ n }}" {{ 'selected' if limit == n }}>Last {{ n }}</option>{% endfor %}
+    </select>
+  </form>
+  {% if entries %}
+  <div class="table-wrap"><table class="data-table">
+    <thead><tr><th>Time (UTC)</th><th>Action</th><th>Device</th><th>Description</th><th>Result</th></tr></thead>
+    <tbody>{% for a in entries %}
+      <tr><td class="text-secondary small text-nowrap">{{ a.timestamp }}</td><td class="fw-semibold">{{ a.action_type|replace('_',' ')|capitalize }}</td>
+        <td>{{ a.device_name or '—' }}<span class="sub text-capitalize">{{ a.device_type }}</span></td>
+        <td class="text-secondary">{{ a.description }}</td><td>{{ status_badge(a.status) }}</td></tr>
+    {% endfor %}</tbody></table></div>
+  {% else %}{{ empty_state("journal-text", "No activity", "Nothing has been recorded for this filter.") }}{% endif %}
+</div>
+
+<div class="panel">
+  <div class="panel-head"><h2>Firmware history</h2></div>
+  {% if firmware %}
+  <div class="table-wrap"><table class="data-table">
+    <thead><tr><th>Started</th><th>Device</th><th>From</th><th>To</th><th>Status</th><th>Error</th></tr></thead>
+    <tbody>{% for f in firmware %}
+      <tr><td class="text-secondary small text-nowrap">{{ f.started_at }}</td><td class="fw-semibold">{{ f.device_name }}<span class="sub text-capitalize">{{ f.device_type }}</span></td>
+        <td class="mono">{{ f.old_version or '—' }}</td><td class="mono text-break">{{ f.new_version or '—' }}</td>
+        <td>{{ status_badge(f.status) }}</td><td class="text-secondary small">{{ f.error_message or '' }}</td></tr>
+    {% endfor %}</tbody></table></div>
+  {% else %}{{ empty_state("cpu", "No firmware updates yet", "Updates you run will be tracked here.") }}{% endif %}
+</div>
+{% endblock %}

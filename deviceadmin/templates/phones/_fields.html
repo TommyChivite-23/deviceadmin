@@ -1,0 +1,32 @@
+{# Shared field set for creating and editing a phone. `phone` is None when creating. #}
+{% macro phone_fields(phone) %}
+<div class="row g-3">
+  <div class="col-md-6"><label class="form-label">Device name *</label>
+    <input class="form-control" name="device_name" required value="{{ phone.device_name if phone }}"></div>
+  <div class="col-md-6"><label class="form-label">MAC address *</label>
+    <input class="form-control mono" name="mac_address" required placeholder="02:00:5E:00:00:01" value="{{ phone.mac_address if phone }}"></div>
+  <div class="col-md-4"><label class="form-label">IP address *</label>
+    <input class="form-control mono" name="ip_address" required placeholder="198.51.100.10" value="{{ phone.ip_address if phone }}"></div>
+  <div class="col-md-4"><label class="form-label">Extension</label>
+    <input class="form-control mono" name="extension" value="{{ phone.extension if phone }}"></div>
+  <div class="col-md-4"><label class="form-label">Firmware</label>
+    <input class="form-control mono" name="firmware_version" value="{{ phone.firmware_version if phone }}"></div>
+  <div class="col-md-4"><label class="form-label">Assigned user</label>
+    <select class="form-select" name="user_id"><option value="">— unassigned —</option>
+      {% for u in users %}<option value="{{ u.id }}" {{ 'selected' if phone and phone.user_id == u.id }}>{{ u.name }}</option>{% endfor %}</select></div>
+  <div class="col-md-4"><label class="form-label">Location</label>
+    <select class="form-select" name="location_id"><option value="">— none —</option>
+      {% for l in locations %}<option value="{{ l.id }}" {{ 'selected' if phone and phone.location_id == l.id }}>{{ l.name }}</option>{% endfor %}</select></div>
+  <div class="col-md-4"><label class="form-label">Department</label>
+    <select class="form-select" name="department_id"><option value="">— none —</option>
+      {% for d in departments %}<option value="{{ d.id }}" {{ 'selected' if phone and phone.department_id == d.id }}>{{ d.name }}</option>{% endfor %}</select></div>
+  <div class="col-md-4"><label class="form-label">Status</label>
+    <select class="form-select" name="status">
+      {% for s in ['online', 'offline'] %}<option {{ 'selected' if phone and phone.status == s }}>{{ s }}</option>{% endfor %}</select></div>
+  <div class="col-md-4"><label class="form-label">Provisioning</label>
+    <select class="form-select" name="provisioning_status">
+      {% for s in ['provisioned', 'pending', 'unprovisioned'] %}<option {{ 'selected' if phone and phone.provisioning_status == s }}>{{ s }}</option>{% endfor %}</select></div>
+  <div class="col-12"><label class="form-label">Notes</label>
+    <textarea class="form-control" name="notes" rows="2">{{ phone.notes if phone }}</textarea></div>
+</div>
+{% endmacro %}

@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% from "macros.html" import status_badge, empty_state, page_header, dt %}
+{% block title %}Volume policies{% endblock %}
+{% block heading %}Volume policies{% endblock %}
+{% block content %}
+{{ page_header("Volume policies", "Set a volume level and optionally lock it so users cannot change it. Policies are saved only for phones that accepted the change.") }}
+
+<div class="panel mb-3">
+  <div class="panel-head"><h2>Apply to the entire fleet</h2></div>
+  <form class="panel-body row g-2 align-items-end" method="post" action="{{ url_for('volume.apply_all') }}">
+    <div class="col-md-2"><label class="form-label">Level (0–10)</label><input class="form-control" type="number" name="volume_level" min="0" max="10" value="6"></div>
+    <div class="col-md-3"><label class="form-label">Mode</label><select class="form-select" name="is_locked"><option value="0">User adjustable</option><option value="1">Locked</option></select></div>
+    <div class="col-md-4"><label class="form-label">Policy name</label><input class="form-control" name="policy_name" placeholder="Fleet-Wide Policy"></div>
+    <div class="col-md-3"><button class="btn btn-primary w-100" data-overlay data-confirm="Apply this policy to EVERY phone?"><i class="bi bi-broadcast-pin me-1"></i>Apply to all phones</button></div>
+  </form>
+</div>
+
+<div class="panel">
+  <form class="filter-bar" method="get">
+    <input class="form-control form-control-sm" name="search" value="{{ search }}" placeholder="Search phone, user, location…">
+    <button class="btn btn-sm btn-outline-secondary">Search</button>
+    {% if search %}<a class="btn btn-sm btn-link" href="{{ url_for('volume.policies') }}">Clear</a>{% endif %}
+  </form>
+  {% if rows %}
+  <form method="post" action="{{ url_for('volume.bulk') }}">
+    <div class="filter-bar bg-light">
+      <span class="small text-secondary"><strong data-bulk-count>0</strong> selected</span>
+      <input class="form-control form-control-sm" type="number" name="volume_level" min="0" max="10" value="5" style="max-width:90px" aria-label="Level">
+      <select class="form-select form-select-sm" name="is_locked" style="max-width:160px"><option value="0">User adjustable</option><option value="1">Locked</option></select>
+      <input class="form-control form-control-sm" name="policy_name" placeholder="Policy name" style="max-width:200px">
+      <button class="btn btn-sm btn-primary" data-bulk-action disabled data-overlay>Apply to selected</button>
+    </div>
+    <div class="table-wrap"><table class="data-table">
+      <thead><tr><th style="width:40px"><input class="form-check-input" type="checkbox" data-select-all="phone_ids" aria-label="Select all"></th>
+        <th>Phone</th><th>User</th><th>Location</th><th>Volume</th><th>Mode</th><th>Policy</th><th>Applied</th></tr></thead>
+      <tbody>{% for r in rows %}
+        <tr><td><input class="form-check-input" type="checkbox" name="phone_ids" value="{{ r.id }}" data-bulk-item></td>
+          <td class="fw-semibold"><a class="text-decoration-none" href="{{ url_for('phones.phone_detail', phone_id=r.id) }}">{{ r.device_name }}</a>
+              <span class="sub">{{ status_badge(r.status) }}</span></td>
+          <td>{{ r.assigned_user or '—' }}</td><td>{{ r.location or '—' }}</td>
+          <td>{% if r.volume_level is not none %}<div class="d-flex align-items-center gap-2">
+              <div class="volume-meter" aria-hidden="true">{% for i in range(1, 11) %}<span class="{{ 'on' if i <= r.volume_level }}" style="height: {{ 25 + i * 7 }}%"></span>{% endfor %}</div>
+              <strong>{{ r.volume_level }}</strong></div>{% else %}<span class="text-secondary">Not set</span>{% endif %}</td>
+          <td>{% if r.volume_level is none %}—{% elif r.is_locked %}<span class="status status-warn"><i class="bi bi-lock-fill"></i> Locked</span>{% else %}<span class="status status-muted">Adjustable</span>{% endif %}</td>
+          <td class="text-secondary">{{ r.policy_name or '—' }}</td><td class="text-secondary small">{{ dt(r.applied_at) }}</td></tr>
+      {% endfor %}</tbody></table></div>
+  </form>
+  {% else %}{{ empty_state("volume-mute", "No phones found", "Nothing matches your search.") }}{% endif %}
+</div>
+{% endblock %}

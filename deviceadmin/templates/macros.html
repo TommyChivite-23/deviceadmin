@@ -1,0 +1,44 @@
+{% macro status_badge(value, label=None) %}
+{%- set tone = {'online':'ok','connected':'ok','success':'ok','healthy':'ok','delivered':'ok','provisioned':'ok',
+                'offline':'bad','disconnected':'bad','failed':'bad','down':'bad','none':'muted',
+                'partial':'warn','degraded':'warn','pending':'warn','in_progress':'warn','unknown':'muted'}.get(value|lower, 'muted') -%}
+<span class="status status-{{ tone }}"><span class="dot"></span>{{ label or value|replace('_',' ')|capitalize }}</span>
+{%- endmacro %}
+
+{% macro empty_state(icon, title, text) %}
+<div class="empty-state">
+  <i class="bi bi-{{ icon }}"></i>
+  <div class="fw-semibold">{{ title }}</div>
+  <div class="text-secondary small">{{ text }}</div>
+  {{ caller() if caller else '' }}
+</div>
+{% endmacro %}
+
+{% macro page_header(title, subtitle='') %}
+<div class="page-header">
+  <div><h1>{{ title }}</h1>{% if subtitle %}<p>{{ subtitle }}</p>{% endif %}</div>
+  <div class="page-actions">{{ caller() if caller else '' }}</div>
+</div>
+{% endmacro %}
+
+{% macro kpi(label, value, icon, hint='', tone='') %}
+<div class="kpi {{ tone }}">
+  <div class="kpi-icon"><i class="bi bi-{{ icon }}"></i></div>
+  <div><div class="kpi-value">{{ value }}</div><div class="kpi-label">{{ label }}</div>
+  {% if hint %}<div class="kpi-hint">{{ hint }}</div>{% endif %}</div>
+</div>
+{% endmacro %}
+
+{% macro pagination(page, pages, endpoint) %}
+{% if pages > 1 %}
+<nav class="d-flex justify-content-between align-items-center mt-3" aria-label="Pagination">
+  <span class="text-secondary small">Page {{ page }} of {{ pages }}</span>
+  <ul class="pagination pagination-sm mb-0">
+    <li class="page-item {{ 'disabled' if page <= 1 }}"><a class="page-link" href="{{ url_for(endpoint, page=page-1, **kwargs) }}">Previous</a></li>
+    <li class="page-item {{ 'disabled' if page >= pages }}"><a class="page-link" href="{{ url_for(endpoint, page=page+1, **kwargs) }}">Next</a></li>
+  </ul>
+</nav>
+{% endif %}
+{% endmacro %}
+
+{% macro dt(value) %}{{ value[:16] if value else '—' }}{% endmacro %}

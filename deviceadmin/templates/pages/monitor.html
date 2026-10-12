@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% from "macros.html" import status_badge, empty_state, page_header, kpi, dt %}
+{% block title %}Page monitor{% endblock %}
+{% block heading %}Page monitor{% endblock %}
+{% block content %}
+{% call page_header("Page monitor", "Watches phones for paging / intercom calls, records who paged whom, and texts the notification list.") %}
+  <form method="post" action="{{ url_for('pages.scan') }}"><button class="btn btn-outline-secondary" data-overlay><i class="bi bi-search me-1"></i>Scan now</button></form>
+  <form method="post" action="{{ url_for('pages.toggle') }}">
+    {% if monitor.enabled %}<button class="btn btn-outline-warning"><i class="bi bi-pause-fill me-1"></i>Pause</button>
+    {% else %}<button class="btn btn-success"><i class="bi bi-play-fill me-1"></i>Activate</button>{% endif %}
+  </form>
+{% endcall %}
+
+<div class="kpi-grid">
+  {{ kpi("Monitor", "Active" if monitor.enabled else "Paused", "activity", "polling every " ~ monitor.poll_interval ~ "s", "ok" if monitor.enabled else "warn") }}
+  {{ kpi("Pages recorded", total_events, "megaphone") }}
+  {{ kpi("Active recipients", active_count, "chat-dots", "of " ~ contacts|length ~ " contacts") }}
+  {{ kpi("Cooldown", monitor.cooldown_seconds ~ "s", "hourglass-split", "per target phone") }}
+</div>
+
+<div class="row g-3">
+  <div class="col-xl-8">
+    <div class="panel mb-3">
+      <div class="panel-head"><h2>Detected pages</h2></div>
+      {% if events %}
+      <div class="table-wrap"><table class="data-table">
+        <thead><tr><th>When</th><th>From</th><th>To</th><th>Type</th><th>SMS</th></tr></thead>
+        <tbody>{% for e in events %}
+          <tr><td class="text-secondary small text-nowrap">{{ dt(e.timestamp) }}</td>
+            <td class="fw-semibold text-nowrap">{{ e.source_name }}<span class="sub">ext {{ e.source_extension }}{% if e.source_user %} · {{ e.source_user }}{% endif %}{% if e.source_location %} · {{ e.source_location }}{% endif %}</span></td>
+            <td class="fw-semibold text-nowrap">{{ e.target_name }}<span class="sub">ext {{ e.target_extension }}</span></td>
+            <td>{{ e.call_type }}</td>
+            <td>{% if e.sms_sent %}{{ status_badge('delivered') }}{% else %}{{ status_badge('failed') }}{% endif %}<span class="sub">{{ e.sms_detail }}</span></td></tr>
+        {% endfor %}</tbody></table></div>
+      {% else %}{{ empty_state("megaphone", "No pages detected yet", "Use the simulator on the right to generate one.") }}{% endif %}
+    </div>
+  </div>
+
+  <div class="col-xl-4">
+    <div class="panel mb-3">
+      <div class="panel-head"><h2>Simulate a page</h2></div>
+      <form class="panel-body row g-2" method="post" action="{{ url_for('pages.simulate') }}">
+        <div class="col-12 small text-secondary">Queues a paging call on the mock phone connector and runs one monitor scan — useful for demos and tests.</div>
+        <div class="col-12"><label class="form-label">Calling phone</label>
+          <select class="form-select form-select-sm" name="source_id">{% for p in phones %}<option value="{{ p.id }}">{{ p.device_name }} (ext {{ p.extension }})</option>{% endfor %}</select></div>
+        <div class="col-12"><label class="form-label">Receiving phone</label>
+          <select class="form-select form-select-sm" name="target_id">{% for p in phones|reverse %}<option value="{{ p.id }}">{{ p.device_name }} (ext {{ p.extension }})</option>{% endfor %}</select></div>
+        <div class="col-12"><button class="btn btn-sm btn-primary w-100" data-overlay>Simulate page</button></div>
+      </form>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h2>Notification list</h2></div>
+      {% if contacts %}<ul class="timeline">{% for c in contacts %}
+        <li><div class="flex-grow-1"><div class="fw-semibold">{{ c.name }}</div><div class="sub mono">{{ c.phone }}</div></div>
+          <form method="post" class="d-flex gap-1 align-items-start">
+            <button class="btn btn-sm {{ 'btn-success' if c.is_active else 'btn-outline-secondary' }}" formaction="{{ url_for('pages.toggle_contact', contact_id=c.id) }}">{{ 'On' if c.is_active else 'Off' }}</button>
+            <button class="btn btn-sm btn-outline-danger" formaction="{{ url_for('pages.delete_contact', contact_id=c.id) }}" data-confirm="Remove {{ c.name }}?"><i class="bi bi-trash"></i></button>
+          </form></li>{% endfor %}</ul>
+      {% else %}{{ empty_state("person-x", "No recipients", "Add someone to be texted when a page is detected.") }}{% endif %}
+      <form class="panel-body border-top row g-2" method="post" action="{{ url_for('pages.add_contact') }}">
+        <div class="col-5"><input class="form-control form-control-sm" name="name" placeholder="Name" required></div>
+        <div class="col-5"><input class="form-control form-control-sm" name="phone" placeholder="(202) 555-0123" required></div>
+        <div class="col-2"><button class="btn btn-sm btn-primary w-100">Add</button></div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

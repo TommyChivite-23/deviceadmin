@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% from "macros.html" import empty_state, page_header %}
+{% block title %}Users{% endblock %}
+{% block heading %}Users{% endblock %}
+{% block content %}
+{{ page_header("Users", users|length ~ " people and the devices assigned to them") }}
+<div class="panel">
+  <form class="filter-bar" method="get">
+    <input class="form-control form-control-sm" name="search" value="{{ search }}" placeholder="Search name, email or department…">
+    <button class="btn btn-sm btn-outline-secondary">Search</button>
+    {% if search %}<a class="btn btn-sm btn-link" href="{{ url_for('users.user_list') }}">Clear</a>{% endif %}
+  </form>
+  {% if users %}
+  <div class="table-wrap"><table class="data-table">
+    <thead><tr><th>Name</th><th>Email</th><th>Department</th><th>Title</th><th class="text-center">Phones</th><th class="text-center">Docks</th></tr></thead>
+    <tbody>{% for u in users %}
+      <tr><td class="fw-semibold">{{ u.name }}</td><td class="text-secondary">{{ u.email }}</td><td>{{ u.department or '—' }}</td>
+          <td class="text-secondary">{{ u.title }}</td>
+          <td class="text-center">{{ u.phone_count }}</td><td class="text-center">{{ u.dock_count }}</td></tr>
+    {% endfor %}</tbody></table></div>
+  {% else %}{{ empty_state("people", "No users match", "Try a different search.") }}{% endif %}
+</div>
+{% endblock %}

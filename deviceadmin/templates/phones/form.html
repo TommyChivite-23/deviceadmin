@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% from "macros.html" import page_header %}
+{% from "phones/_fields.html" import phone_fields with context %}
+{% block title %}Add phone{% endblock %}
+{% block heading %}Phones / Add{% endblock %}
+{% block content %}
+{{ page_header("Add a phone", "Register a new desk phone in the inventory.") }}
+<form class="panel" method="post" action="{{ url_for('phones.create_phone') }}">
+  <div class="panel-body">{{ phone_fields(None) }}</div>
+  <div class="panel-head border-top border-bottom-0 justify-content-end">
+    <a class="btn btn-outline-secondary" href="{{ url_for('phones.phone_list') }}">Cancel</a>
+    <button class="btn btn-primary">Add phone</button>
+  </div>
+</form>
+{% endblock %}

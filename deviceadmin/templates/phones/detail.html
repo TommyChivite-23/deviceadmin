@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% from "macros.html" import status_badge, page_header, empty_state, dt %}
+{% from "phones/_fields.html" import phone_fields with context %}
+{% block title %}{{ phone.device_name }}{% endblock %}
+{% block heading %}<a class="text-decoration-none text-secondary" href="{{ url_for('phones.phone_list') }}">Phones</a> / {{ phone.device_name }}{% endblock %}
+{% block content %}
+{% call page_header(phone.device_name, (phone.model or 'Desk phone') ~ " · " ~ (phone.location or 'No location')) %}
+  <form method="post" action="{{ url_for('phones.reboot', phone_id=phone.id) }}">
+    <button class="btn btn-outline-danger" data-confirm="Reboot {{ phone.device_name }}?"><i class="bi bi-power me-1"></i>Reboot</button>
+  </form>
+  <button class="btn btn-outline-secondary" type="button" data-fetch-json="{{ url_for('phones.config', phone_id=phone.id) }}" data-target="#configOut">
+    <i class="bi bi-braces me-1"></i>Pull config</button>
+{% endcall %}
+
+<div class="row g-3">
+  <div class="col-lg-4">
+    <div class="panel mb-3">
+      <div class="panel-head"><h2>Overview</h2>{{ status_badge(phone.status) }}</div>
+      <div class="panel-body">
+        <dl class="row mb-0 small">
+          <dt class="col-5 text-secondary">User</dt><dd class="col-7">{{ phone.assigned_user or '—' }}</dd>
+          <dt class="col-5 text-secondary">Department</dt><dd class="col-7">{{ phone.department or '—' }}</dd>
+          <dt class="col-5 text-secondary">Site</dt><dd class="col-7">{{ phone.site or '—' }}</dd>
+          <dt class="col-5 text-secondary">Extension</dt><dd class="col-7 mono">{{ phone.extension }}</dd>
+          <dt class="col-5 text-secondary">IP address</dt><dd class="col-7 mono">{{ phone.ip_address }}</dd>
+          <dt class="col-5 text-secondary">MAC</dt><dd class="col-7 mono">{{ phone.mac_address }}</dd>
+          <dt class="col-5 text-secondary">Firmware</dt><dd class="col-7 mono">{{ phone.firmware_version or '—' }}</dd>
+          <dt class="col-5 text-secondary">Provisioning</dt><dd class="col-7">{{ status_badge(phone.provisioning_status) }}</dd>
+          <dt class="col-5 text-secondary">Last seen</dt><dd class="col-7">{{ dt(phone.last_seen) }}</dd>
+        </dl>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h2>Volume policy</h2></div>
+      <div class="panel-body">
+        {% if policy %}
+          <div class="d-flex align-items-center gap-3 mb-2">
+            <div class="volume-meter" aria-hidden="true">{% for i in range(1, 11) %}<span class="{{ 'on' if i <= policy.volume_level }}" style="height: {{ 25 + i * 7 }}%"></span>{% endfor %}</div>
+            <strong>{{ policy.volume_level }}/10</strong>
+            {% if policy.is_locked %}<span class="status status-warn"><i class="bi bi-lock-fill"></i> Locked</span>{% else %}<span class="status status-muted">User adjustable</span>{% endif %}
+          </div>
+          <div class="sub">{{ policy.policy_name or 'Unnamed policy' }} · applied {{ dt(policy.applied_at) }}</div>
+        {% else %}<div class="text-secondary small">No policy has been applied.</div>{% endif %}
+        <form class="row g-2 mt-2" method="post" action="{{ url_for('volume.set_one', phone_id=phone.id) }}">
+          <div class="col-4"><input class="form-control form-control-sm" type="number" min="0" max="10" name="volume_level" value="{{ policy.volume_level if policy else 5 }}"></div>
+          <div class="col-8"><select class="form-select form-select-sm" name="is_locked">
+            <option value="0">User adjustable</option><option value="1" {{ 'selected' if policy and policy.is_locked }}>Locked</option></select></div>
+          <div class="col-12"><input class="form-control form-control-sm" name="policy_name" placeholder="Policy name (optional)"></div>
+          <div class="col-12"><button class="btn btn-sm btn-primary w-100">Apply to phone</button></div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-8">
+    <div class="panel mb-3">
+      <div class="panel-head"><h2>Firmware update</h2></div>
+      <div class="panel-body">
+        <form class="row g-2 align-items-end" method="post" action="{{ url_for('phones.firmware', phone_id=phone.id) }}">
+          <div class="col-md-8"><label class="form-label">Firmware URL (must be reachable from the phone)</label>
+            <input class="form-control mono" name="firmware_url" placeholder="http://updates.example/firmware/vx250-6.4.4.fw" required></div>
+          <div class="col-md-4 d-flex gap-2">
+            <button class="btn btn-outline-secondary flex-fill" name="dry_run" value="1">Dry run</button>
+            <button class="btn btn-primary flex-fill" data-confirm="Push firmware to {{ phone.device_name }}?">Push</button>
+          </div>
+        </form>
+        <div class="form-text">A dry run validates the URL and shows the requests that would be sent, without sending anything.</div>
+        <pre class="code-block mt-3 mb-0" id="configOut" hidden></pre>
+      </div>
+    </div>
+
+    <div class="panel mb-3">
+      <div class="panel-head"><h2>Recent activity</h2></div>
+      {% if history %}
+      <ul class="timeline">{% for a in history %}
+        <li><div class="flex-grow-1"><div class="fw-semibold">{{ a.action_type|replace('_',' ')|capitalize }}</div><div class="sub">{{ a.description }}</div></div>
+            <div class="text-end">{{ status_badge(a.status) }}<div class="when mt-1">{{ dt(a.timestamp) }}</div></div></li>{% endfor %}</ul>
+      {% else %}{{ empty_state("clock-history", "No recorded activity", "Actions on this phone will appear here.") }}{% endif %}
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h2>Edit details</h2></div>
+      <form method="post" action="{{ url_for('phones.edit_phone', phone_id=phone.id) }}">
+        <div class="panel-body">{{ phone_fields(phone) }}</div>
+        <div class="panel-head border-top border-bottom-0 justify-content-between">
+          <button class="btn btn-outline-danger btn-sm" formaction="{{ url_for('phones.delete_phone', phone_id=phone.id) }}"
+                  data-confirm="Remove {{ phone.device_name }} from the inventory?">Delete phone</button>
+          <button class="btn btn-primary btn-sm">Save changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

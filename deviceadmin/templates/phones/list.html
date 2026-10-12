@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% from "macros.html" import status_badge, empty_state, page_header, pagination, dt %}
+{% block title %}Phones{% endblock %}
+{% block heading %}Phones{% endblock %}
+{% block content %}
+{% call page_header("Desk phones", total ~ " devices match your filters") %}
+  <form method="post" action="{{ url_for('phones.sync_fleet') }}">
+    <button class="btn btn-outline-primary" data-overlay><i class="bi bi-arrow-repeat me-1"></i>Sync fleet</button>
+  </form>
+  <a class="btn btn-primary" href="{{ url_for('phones.new_phone') }}"><i class="bi bi-plus-lg me-1"></i>Add phone</a>
+{% endcall %}
+
+<div class="panel">
+  <form class="filter-bar" method="get">
+    <input class="form-control form-control-sm" name="search" value="{{ search }}" placeholder="Search name, user, extension, IP, MAC…">
+    <select class="form-select form-select-sm" name="status" onchange="this.form.submit()">
+      <option value="">All statuses</option>
+      <option value="online" {{ 'selected' if status == 'online' }}>Online</option>
+      <option value="offline" {{ 'selected' if status == 'offline' }}>Offline</option>
+    </select>
+    <select class="form-select form-select-sm" name="department" onchange="this.form.submit()">
+      <option value="">All departments</option>
+      {% for d in departments %}<option value="{{ d.id }}" {{ 'selected' if department_id == d.id }}>{{ d.name }}</option>{% endfor %}
+    </select>
+    <button class="btn btn-sm btn-outline-secondary">Filter</button>
+    {% if search or status or department_id %}<a class="btn btn-sm btn-link" href="{{ url_for('phones.phone_list') }}">Clear</a>{% endif %}
+  </form>
+
+  {% if phones %}
+  <form method="post" action="{{ url_for('phones.bulk_reboot') }}">
+    <div class="filter-bar bg-light">
+      <span class="small text-secondary"><strong data-bulk-count>0</strong> selected</span>
+      <button class="btn btn-sm btn-outline-danger" data-bulk-action disabled data-overlay
+              data-confirm="Reboot the selected phones?"><i class="bi bi-power me-1"></i>Reboot selected</button>
+    </div>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead><tr>
+          <th style="width:40px"><input class="form-check-input" type="checkbox" data-select-all="phone_ids" aria-label="Select all"></th>
+          <th>Device</th><th>User</th><th>Location</th><th>Ext.</th><th>IP address</th><th>Firmware</th><th>Status</th><th>Last seen</th>
+        </tr></thead>
+        <tbody>
+        {% for p in phones %}
+          <tr>
+            <td><input class="form-check-input" type="checkbox" name="phone_ids" value="{{ p.id }}" data-bulk-item></td>
+            <td><a class="fw-semibold text-decoration-none" href="{{ url_for('phones.phone_detail', phone_id=p.id) }}">{{ p.device_name }}</a>
+                <span class="sub mono">{{ p.mac_address }}</span></td>
+            <td>{{ p.assigned_user or '—' }}<span class="sub">{{ p.department or '' }}</span></td>
+            <td>{{ p.location or '—' }}<span class="sub">{{ p.site or '' }}</span></td>
+            <td class="mono">{{ p.extension }}</td>
+            <td class="mono">{{ p.ip_address }}</td>
+            <td class="mono">{{ p.firmware_version or '—' }}</td>
+            <td>{{ status_badge(p.status) }}</td>
+            <td class="text-secondary small">{{ dt(p.last_seen) }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </form>
+  <div class="px-3 pb-3">{{ pagination(page, pages, 'phones.phone_list', search=search, status=status, department=department_id) }}</div>
+  {% else %}
+    {% call empty_state("telephone-x", "No phones found", "Try clearing the filters or add a new phone.") %}
+    <a class="btn btn-sm btn-outline-primary mt-3" href="{{ url_for('phones.phone_list') }}">Clear filters</a>
+    {% endcall %}
+  {% endif %}
+</div>
+{% endblock %}

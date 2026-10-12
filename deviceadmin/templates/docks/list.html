@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% from "macros.html" import status_badge, empty_state, page_header, dt %}
+{% block title %}Docks{% endblock %}
+{% block heading %}Docking stations{% endblock %}
+{% block content %}
+{% call page_header("Docking stations", docks|length ~ " docks · firmware is managed through each dock's host computer") %}
+  <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addDock"><i class="bi bi-plus-lg me-1"></i>Add dock</button>
+{% endcall %}
+
+<div class="panel">
+  <form class="filter-bar" method="get">
+    <input class="form-control form-control-sm" name="search" value="{{ search }}" placeholder="Search name, model, serial, host, user…">
+    <select class="form-select form-select-sm" name="status" onchange="this.form.submit()">
+      <option value="">All statuses</option>
+      <option value="connected" {{ 'selected' if status == 'connected' }}>Connected</option>
+      <option value="disconnected" {{ 'selected' if status == 'disconnected' }}>Disconnected</option>
+    </select>
+    <button class="btn btn-sm btn-outline-secondary">Filter</button>
+    {% if search or status %}<a class="btn btn-sm btn-link" href="{{ url_for('docks.dock_list') }}">Clear</a>{% endif %}
+  </form>
+
+  {% if docks %}
+  <form method="post" action="{{ url_for('docks.bulk_firmware') }}">
+    <div class="filter-bar bg-light">
+      <span class="small text-secondary"><strong data-bulk-count>0</strong> selected</span>
+      <input class="form-control form-control-sm mono" name="firmware_file" value="dock-firmware-latest.cab" style="max-width:240px" aria-label="Firmware package">
+      <button class="btn btn-sm btn-primary" data-bulk-action disabled data-overlay data-confirm="Push firmware to all selected docks?">
+        <i class="bi bi-cloud-arrow-up me-1"></i>Update selected</button>
+    </div>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead><tr><th style="width:40px"><input class="form-check-input" type="checkbox" data-select-all="dock_ids" aria-label="Select all"></th>
+          <th>Dock</th><th>Host / user</th><th>Location</th><th>Firmware</th><th>Status</th><th>Last seen</th><th></th></tr></thead>
+        <tbody>
+        {% for d in docks %}
+          <tr>
+            <td><input class="form-check-input" type="checkbox" name="dock_ids" value="{{ d.id }}" data-bulk-item></td>
+            <td class="fw-semibold">{{ d.dock_name }}<span class="sub">{{ d.model }}</span><span class="sub mono">{{ d.serial_number }}</span></td>
+            <td class="mono">{{ d.host_computer or '—' }}<span class="sub" style="font-family:var(--font)">{{ d.assigned_user or 'Unassigned' }}</span></td>
+            <td>{{ d.location or '—' }}<span class="sub">{{ d.department or '' }}</span></td>
+            <td class="mono">{{ d.firmware_version or '—' }}
+              {% if d.outdated %}<span class="status status-warn ms-1" title="Latest is {{ d.latest }}">Update available</span>{% else %}<i class="bi bi-check-circle-fill text-success ms-1" title="Up to date"></i>{% endif %}</td>
+            <td>{{ status_badge(d.status) }}</td>
+            <td class="text-secondary small">{{ dt(d.last_seen) }}</td>
+            <td class="text-end text-nowrap">
+              <button class="btn btn-sm btn-outline-secondary" formaction="{{ url_for('docks.refresh', dock_id=d.id) }}" title="Ask the host for the real firmware version"><i class="bi bi-arrow-repeat"></i></button>
+              <button class="btn btn-sm btn-outline-danger" formaction="{{ url_for('docks.delete_dock', dock_id=d.id) }}" data-confirm="Remove {{ d.dock_name }}?" title="Remove"><i class="bi bi-trash"></i></button>
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </form>
+  {% else %}
+    {{ empty_state("usb-drive", "No docks found", "Adjust the filters or add a dock to the inventory.") }}
+  {% endif %}
+</div>
+
+<div class="modal fade" id="addDock" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg"><form class="modal-content" method="post" action="{{ url_for('docks.add_dock') }}">
+    <div class="modal-header"><h5 class="modal-title">Add docking station</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body"><div class="row g-3">
+      <div class="col-md-6"><label class="form-label">Dock name *</label><input class="form-control" name="dock_name" required></div>
+      <div class="col-md-6"><label class="form-label">Serial number *</label><input class="form-control mono" name="serial_number" required></div>
+      <div class="col-md-6"><label class="form-label">Model *</label><select class="form-select" name="model" required>{% for m in models %}<option>{{ m }}</option>{% endfor %}</select></div>
+      <div class="col-md-6"><label class="form-label">Host computer</label><input class="form-control mono" name="host_computer" placeholder="WS-DEMO-0100"></div>
+      <div class="col-md-4"><label class="form-label">Firmware</label><input class="form-control mono" name="firmware_version"></div>
+      <div class="col-md-4"><label class="form-label">User</label><select class="form-select" name="user_id"><option value="">—</option>{% for u in users %}<option value="{{ u.id }}">{{ u.name }}</option>{% endfor %}</select></div>
+      <div class="col-md-4"><label class="form-label">Location</label><select class="form-select" name="location_id"><option value="">—</option>{% for l in locations %}<option value="{{ l.id }}">{{ l.name }}</option>{% endfor %}</select></div>
+      <div class="col-md-6"><label class="form-label">Department</label><select class="form-select" name="department_id"><option value="">—</option>{% for d in departments %}<option value="{{ d.id }}">{{ d.name }}</option>{% endfor %}</select></div>
+      <div class="col-md-6"><label class="form-label">Status</label><select class="form-select" name="status"><option>connected</option><option>disconnected</option><option>unknown</option></select></div>
+    </div></div>
+    <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button><button class="btn btn-primary">Add dock</button></div>
+  </form></div>
+</div>
+{% endblock %}

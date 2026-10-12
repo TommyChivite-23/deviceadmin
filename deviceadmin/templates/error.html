@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% from "macros.html" import empty_state %}
+{% block title %}{{ code }}{% endblock %}
+{% block heading %}Error {{ code }}{% endblock %}
+{% block content %}
+<div class="panel">
+  {% call empty_state("exclamation-octagon", title, message) %}
+  <a class="btn btn-primary btn-sm mt-3" href="{{ url_for('dashboard.home') }}">Back to dashboard</a>
+  {% endcall %}
+</div>
+{% endblock %}
