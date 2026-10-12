@@ -1,0 +1,6 @@
+-r requirements.txt
+
+# Test + lint tooling (used locally and by GitHub Actions)
+pytest==8.3.4
+pytest-cov==6.0.0
+ruff==0.8.6

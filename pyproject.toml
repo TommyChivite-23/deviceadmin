@@ -1,0 +1,17 @@
+[project]
+name = "deviceadmin"
+version = "2.0.0"
+description = "Fleet administration dashboard with a pluggable connector layer (public portfolio edition)"
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]
+ignore = ["E501", "UP007", "UP037", "B008"]
