@@ -234,4 +234,4 @@ Realistic next steps:
 
 ## License
 
-IT - see [LICENSE](LICENSE). 
+MIT - see [LICENSE](LICENSE). 
