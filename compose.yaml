@@ -1,0 +1,26 @@
+# Run the whole demo with:  docker compose up --build
+# Then open http://localhost:5000
+#
+# Every setting has a safe default, so no .env file is required. To customise,
+# copy .env.example to .env - Compose reads it automatically for ${VAR} substitution.
+services:
+  web:
+    build: .
+    image: deviceadmin:portfolio
+    ports:
+      - "5000:5000"
+    environment:
+      DEVICEADMIN_SECRET_KEY: ${DEVICEADMIN_SECRET_KEY:-change-me-for-anything-other-than-a-local-demo}
+      DEVICEADMIN_APP_NAME: ${DEVICEADMIN_APP_NAME:-DemoCorp Device Admin}
+      DEVICEADMIN_LOG_LEVEL: ${DEVICEADMIN_LOG_LEVEL:-INFO}
+      DEVICEADMIN_CONNECTOR_MODE: ${DEVICEADMIN_CONNECTOR_MODE:-mock}
+      DEVICEADMIN_MOCK_LATENCY_MS: ${DEVICEADMIN_MOCK_LATENCY_MS:-0}
+      DEVICEADMIN_SEED_DEMO_DATA: ${DEVICEADMIN_SEED_DEMO_DATA:-true}
+      DEVICEADMIN_PAGE_MONITOR: ${DEVICEADMIN_PAGE_MONITOR:-true}
+      DEVICEADMIN_DATABASE_PATH: /app/data/deviceadmin.db
+    volumes:
+      - deviceadmin-data:/app/data   # keeps the SQLite database between restarts
+    restart: unless-stopped
+
+volumes:
+  deviceadmin-data:
