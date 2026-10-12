@@ -15,9 +15,9 @@ through a connector layer, so everything here runs on simulated devices and fict
 <!-- SCREENSHOT 1: docs/images/01-dashboard.png -->
 ![Dashboard](docs/images/01-dashboard.png)
 
-**Video walkthrough (about 2.5 minutes, captioned, no audio)** - click the image to open it:
+**Video walkthrough (about 2.5 minutes, captioned, no audio)** - **Video walkthrough (about 2.5 minutes, captioned, no audio):**
 
-[![Watch the walkthrough video](docs/images/02-phone-inventory.png)](docs/media/deviceadmin-walkthrough.mp4)
+https://github.com/user-attachments/assets/10b54351-ae02-4582-becd-c81972a95739
 
 ## Why I built it
 
